@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 selenium = "*"
 bs4 = "*"
+pymongo = {extras = ["srv"], version = "*"}
 
 [dev-packages]
 
