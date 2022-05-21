@@ -15,6 +15,7 @@ time.sleep(3)
 
 html = driver.page_source
 pageSoup = BeautifulSoup(html, "html.parser")
+driver.close()
 
 # first, let's find the last comment page from the pagination items
 def getLastPage(soup):
@@ -24,17 +25,16 @@ def getLastPage(soup):
     return int(pages[-2].text)
 
 # now we know the index of the last comment page:
-lastPageIndex = getLastPage(pageSoup) - 1
-driver.close()
-
+last_page_index = getLastPage(pageSoup) - 1
+# we'll start at index 0 of course
 load_index = 0
-comments = []
 
 # when the comment section was still open, new comments got added to the first page,
 # which made it difficult to retrieve them without accidentally skipping content.
 # Now, the comment section is closed so we can simply start scraping on page one: 
 
-while load_index <= 0:
+while load_index <= last_page_index:
+    page_comments = []
     # opening the driver and having it access the page...
     print(f"loading page {load_index + 1}")
     url = f"{main_url}&page={load_index}"
@@ -46,11 +46,11 @@ while load_index <= 0:
     
     html = driver.page_source
     soup = BeautifulSoup(html, features="html.parser")
+    driver.close()
 
     # now we get all names, comment texts, and submit dates...
     names = soup.find_all('div', {'class' : 'ecl-u-type-prolonged-m'})
-    print(names)
-    commentTexts = soup.find_all('p', {'class' : 'ecl-u-type-paragraph'})
+    comment_texts = soup.find_all('p', {'class' : 'ecl-u-type-paragraph'})
     dates = soup.find_all('time')
 
     # ...and use them to create a dict for each comment that we then append to the comments list:
@@ -58,22 +58,18 @@ while load_index <= 0:
     while i < len(names):
         datetime = dates[i].attrs['datetime']
         date_and_time = datetime.rsplit(" ")
-        comments.append({
+        comment = {
             "page_index": load_index,
             "page_no": load_index + 1,
-            "comment_no": len(comments) + 1,
+            "comment_no": (load_index * 10) + i + 1,
             "name": names[i].text,
             "date": date_and_time[0],
             "time": date_and_time[1],
-            "comment": commentTexts[i].text
-        })
+            "comment": comment_texts[i].text
+        }
+        # add comment to the page comments and general comments lists
+        page_comments.append(comment)
         i += 1
-    
-    driver.close()
 
     # okay, that's it for this page. Let's increase our index so we can get the next page's content!
     load_index += 1
-
-# All content retreived. Let's print the comments in pretty JSON!
-json_comments = json.dumps(comments, indent=4, sort_keys=True, ensure_ascii=False)
-print(json_comments)
