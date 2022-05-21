@@ -11,6 +11,6 @@ col = db["comments"]
 def add_entries(entries, page):
     try:
         col.insert_many(entries)
-        print(f"inserted entries of page {page} to db")
+        print(f"inserted entries of page {page} into db")
     except Exception as e:
         print(e.details)
