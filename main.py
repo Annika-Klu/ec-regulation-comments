@@ -20,48 +20,54 @@ try:
 except Exception as e:
     print(e)
 
-# first, let's find the last comment page from the pagination items
+# let's derive the last comment page from the pagination items
 def getLastPage(soup):
     pages = soup.find_all('ecl-pagination-item', {'class': 'ecl-pagination__item'})
-    # extract 'prev' and 'next' pagination items
     print(f"last page: {pages[-2].text}")
     return int(pages[-2].text)
 
-# now we know the index of the last comment page:
-last_page_index = getLastPage(pageSoup) - 1
+# now we know the last comment page:
+last_page = getLastPage(pageSoup)
+
 # we'll start at index 0 of course
 load_index = 0
 
 # when the comment section was still open, new comments got added to the first page,
 # which made it difficult to retrieve them without accidentally skipping content.
-
 # Meanwhile, the comment section has been closed 
 # so we can simply start scraping on page one and continue up until the last page: 
-while load_index <= last_page_index:
+while load_index < last_page:
     page_no = load_index + 1
     page_comments = []
 
     # opening the driver and having it access the page...
-    print(f"loading page {load_index + 1}")
+    print(f"loading page {page_no}")
     url = f"{main_url}&page={load_index}"
     driver = webdriver.Firefox(executable_path = path)
     try:
         driver.get(url)
-        # loading comments is slow so I make sure to wait a few seconds before getting the content
-        time.sleep(9) 
-        
+        # generating comments is slow so we give the driver some time
+        time.sleep(10)
         html = driver.page_source
         soup = BeautifulSoup(html, features="html.parser")
         driver.close()
     except Exception as e:
         print(e)
+        with open('error_logs.txt', 'w') as log:
+            log.write(f"an exception occurred on page {page_no} (index {load_index})")
+            log.write(str(e))
+            log.close()
 
-    # now we get all names, comment texts, and submit dates...
+    # now we get all names, comment texts, and submit dates
     names = soup.find_all('div', {'class' : 'ecl-u-type-prolonged-m'})
     comment_texts = soup.find_all('p', {'class' : 'ecl-u-type-paragraph'})
     dates = soup.find_all('time')
 
-    # ...and use them to create a dict for each comment that we then append to the comments list:
+    # if comments couldn't be retreived in time, try again
+    if names == []:
+        continue
+
+    # else, use data to create a dict for each comment and append it to the comments list:
     i = 0
     while i < len(names):
         datetime = dates[i].attrs['datetime']
@@ -78,7 +84,7 @@ while load_index <= last_page_index:
         # add comment to the page_comments list
         page_comments.append(comment)
         i += 1
-    
+
     # add page comments to db
     add_entries(page_comments, page_no)
 
