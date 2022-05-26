@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 from selenium import webdriver
-from mongodb import add_entries
+from mongodb import log_err, add_entries
 import time
 
 # define the driver to use and the page to scrape.
@@ -18,7 +18,7 @@ try:
     pageSoup = BeautifulSoup(html, "html.parser")
     driver.close()
 except Exception as e:
-    print(e)
+    log_err(f"initial driver run to get last page", "other", e.details or e)
 
 # let's derive the last comment page from the pagination items
 def getLastPage(soup):
@@ -52,11 +52,7 @@ while load_index < last_page:
         soup = BeautifulSoup(html, features="html.parser")
         driver.close()
     except Exception as e:
-        print(e)
-        with open('error_logs.txt', 'w') as log:
-            log.write(f"an exception occurred on page {page_no} (index {load_index})")
-            log.write(str(e))
-            log.close()
+        log_err(f"loading page {page_no}", "other", e.details or e)
 
     # now we get all names, comment texts, and submit dates
     names = soup.find_all('div', {'class' : 'ecl-u-type-prolonged-m'})

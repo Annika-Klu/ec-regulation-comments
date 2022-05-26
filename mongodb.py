@@ -1,27 +1,44 @@
+import os
+import pymongo
 from pymongo.mongo_client import MongoClient
+from dotenv import load_dotenv
 
-# connecting to a local mongoDB instance
-my_url = "mongodb://localhost:27017"
+load_dotenv()
+
+username = os.environ.get("DBUSER")
+password = os.environ.get("DBPASSWORD")
+project = os.environ.get("DBPROJECT")
+
+# connecting to a mongoDB instance on the cloud
+my_url = f"mongodb+srv://{username}:{password}@{project}.mongodb.net/?retryWrites=true&w=majority"
 client = MongoClient(my_url, serverSelectionTimeoutMS=5000)
 
 db = client["ec_regulation"]
-col = db["comments"]
+comments = db["comments"]
+err_log = db["error_logs"]
 
-# defining db method
+# defining db methods
+def log_err(location, type, details):
+    print(f"exception on {location}: {type}")
+    error = {
+        "err_location": f"exception occurred on: {location})",
+        "err_type": str(type),
+        "err_details": str(details)
+    }
+    err_log.insert_one(error)
+
 def add_entries(entries, page):
     try:
-        col.insert_many(entries)
-        print(f"inserted entries of page {page} into db")
+        comments.insert_many(entries)
+        print(f"Inserted entries of page {page} into db")
+    except (pymongo.errors.DuplicateKeyError, pymongo.errors.BulkWriteError) as pymoerr:
+        log_err(f"loading page {page}", "Duplicate key error", pymoerr.details)
     except Exception as e:
-        print(e)
-        with open('error_logs.txt', 'w') as log:
-            log.write(f"an exception occurred on page {page} (index {page - 1})")
-            log.write(str(e))
-            log.close()
+        log_err(page, "Other", e)
 
 def comments_per_page(last_index):
     pipeline=[{ "$group": {"_id" : "$page_index", "comments": { "$push": "$comment_no" } }}]
-    pages = list(col.aggregate(pipeline))
+    pages = list(comments.aggregate(pipeline))
     i = 0
     while i <= last_index:
         try:
