@@ -9,25 +9,14 @@ path = r'C:\\Users\\Annik\\Geckodriver\\geckodriver.exe'
 driver = webdriver.Firefox(executable_path = path)
 main_url = "https://ec.europa.eu/info/law/better-regulation/have-your-say/initiatives/13375-Extension-of-EU-Digital-COVID-Certificate-Regulation/feedback_de?p_id=27926341"
 
-# run the driver, access the page, and get its HTML
-try:
-    driver.get(main_url)
-    time.sleep(3)
-
-    html = driver.page_source
-    pageSoup = BeautifulSoup(html, "html.parser")
-    driver.close()
-except Exception as e:
-    log_err(f"initial driver run to get last page", "other", e.details or e)
-
-# let's derive the last comment page from the pagination items
+# to derive the last comment page from the pagination items
 def getLastPage(soup):
     pages = soup.find_all('ecl-pagination-item', {'class': 'ecl-pagination__item'})
     print(f"last page: {pages[-2].text}")
     return int(pages[-2].text)
 
-# now we know the last comment page:
-last_page = getLastPage(pageSoup)
+# initialize last page at 1, redefine later during first page loading iteration
+last_page = 1
 
 # we'll start at index 0 of course
 load_index = 0
@@ -53,6 +42,10 @@ while load_index < last_page:
         driver.close()
     except Exception as e:
         log_err(f"loading page {page_no}", "other", e.details or e)
+    
+    # use results from first page to determine last page and reset var accordingly
+    if load_index == 0:
+        last_page = getLastPage(soup)
 
     # now we get all names, comment texts, and submit dates
     names = soup.find_all('div', {'class' : 'ecl-u-type-prolonged-m'})
