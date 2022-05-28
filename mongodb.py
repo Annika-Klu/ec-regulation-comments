@@ -9,8 +9,9 @@ username = os.environ.get("DBUSER")
 password = os.environ.get("DBPASSWORD")
 project = os.environ.get("DBPROJECT")
 
-# connecting to a mongoDB instance on the cloud
-my_url = f"mongodb+srv://{username}:{password}@{project}.mongodb.net/?retryWrites=true&w=majority"
+# connections to a mongoDB instance on the cloud and a local one
+# my_url = f"mongodb+srv://{username}:{password}@{project}.mongodb.net/?retryWrites=true&w=majority"
+my_url = "mongodb://localhost:27017/"
 client = MongoClient(my_url, serverSelectionTimeoutMS=5000)
 
 db = client["ec_regulation"]
@@ -20,6 +21,7 @@ err_log = db["error_logs"]
 # defining db methods
 def log_err(location, type, details):
     print(f"exception on {location}: {type}")
+    print(details)
     error = {
         "err_location": f"exception occurred on: {location})",
         "err_type": str(type),
@@ -34,7 +36,7 @@ def add_entries(entries, page):
     except (pymongo.errors.DuplicateKeyError, pymongo.errors.BulkWriteError) as pymoerr:
         log_err(f"loading page {page}", "Duplicate key error", pymoerr.details)
     except Exception as e:
-        log_err(page, "Other", e)
+       log_err(page, "Other", e)
 
 def comments_per_page(last_index):
     pipeline=[{ "$group": {"_id" : "$page_index", "comments": { "$push": "$comment_no" } }}]
