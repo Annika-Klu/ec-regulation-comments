@@ -6,7 +6,6 @@ import time
 # define the driver to use and the page to scrape.
 # Selenium supports various browsers/drivers, I'm using the one for Firefox
 path = r'C:\\Users\\Annik\\Geckodriver\\geckodriver.exe'
-driver = webdriver.Firefox(executable_path = path)
 main_url = "https://ec.europa.eu/info/law/better-regulation/have-your-say/initiatives/13375-Extension-of-EU-Digital-COVID-Certificate-Regulation/feedback_de?p_id=27926341"
 
 # to derive the last comment page from the pagination items
@@ -41,7 +40,7 @@ while load_index < last_page:
         soup = BeautifulSoup(html, features="html.parser")
         driver.close()
     except Exception as e:
-        log_err(f"loading page {page_no}", "other", e.details or e)
+        log_err(f"loading page {page_no}", "other", e)
     
     # use results from first page to determine last page and reset var accordingly
     if load_index == 0:
